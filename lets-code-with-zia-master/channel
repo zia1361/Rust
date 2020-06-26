@@ -1,0 +1,87 @@
+use std::thread;
+use std::time::Duration;
+use std::sync::mpsc;//--> imported library to create channel
+//imported liraries of thread and duration
+fn main() {
+    let value = thread::spawn(||
+    {
+        for i in 1..10
+        {
+            println!("thread {} from spawn thread",i);
+            thread::sleep(Duration::from_millis(1));
+        }
+    });//--> it will proceed after the below thread bcz of sleep function that we called
+    //value.join().unwrap();//--> by adding join and unwrap function at this position 
+    // will execute the first spawn thread and then main thread
+    for i in 1..5
+    {
+        println!("thread {} from main thread",i);
+        thread::sleep(Duration::from_millis(1));
+    }
+    //expected output will be:Duration
+    //thread 1 from main thread
+    //thread 1 from spawn thread
+    //...
+    // it will end when the main thread is end
+    value.join().unwrap();
+    // after adding this function the main thread will wait until the end of spawn thread
+    //...
+    //..
+    // using move keyword to give ownership to thread closure
+    let v = vec![1,2,3];
+    let give_ownership = thread::spawn(move ||
+    {
+        println!("here's the vector {:?}",v);
+    });
+    // drop(v);//-->this will error bcz we moved value before borrowing in next line
+    // removing drop will be okay and our code will be executed
+    give_ownership.join().unwrap();
+    let (transmitter,receiver)= mpsc::channel();
+    // sending message
+    // thread::spawn(move || {
+    //     let message = String::from("hi");
+    //     transmitter.send(message).unwrap();
+    // });
+    // let received = receiver.recv().unwrap();
+    // println!("got {}",received);
+    // now we will send multiple messages
+    let tx1 = mpsc::Sender::clone(&transmitter);
+    thread::spawn(move || {
+        let send = vec![
+            String::from("hi"),
+            String::from("pixcile"),
+            String::from("product")
+        ];
+        for to_be_send in send
+        {
+            println!("sending {}",to_be_send);
+            tx1.send(to_be_send).unwrap();
+            thread::sleep(Duration::from_secs(1));
+
+        }
+    });
+    // for receiveing in receiver
+    // {
+    //     println!("got: {}",receiveing);
+    //     thread::sleep(Duration::from_secs(1));
+    // }
+    thread::spawn(move || {
+        let v2 = vec![
+            String::from("from"),
+            String::from("a"),
+            String::from("of spark"),
+        ];
+        for item in v2
+        {
+            transmitter.send(item).unwrap();
+            thread::sleep(Duration::from_secs(1));
+        }
+    });
+    for item2 in receiver
+    {
+        println!("got: {}",item2);
+        thread::sleep(Duration::from_secs(1));
+    }
+
+
+}
